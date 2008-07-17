@@ -1,0 +1,8 @@
+FontGen
+=======
+
+A simple utility application that takes a TTF file and converts it
+into a .pgm along with a text file describing which character maps to
+which coordinates.
+
+# EOF #
