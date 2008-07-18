@@ -33,6 +33,13 @@ void generate_image(std::vector<Glyph>& glyphs,
                     const std::string& pgm_filename,
                     const std::string& metadata_filename)
 {
+  std::ofstream metadata(metadata_filename.c_str());
+
+  metadata << "(pingus-font" << std::endl;
+  metadata << "  (size " << font_height << ")" << std::endl;
+  metadata << "  (glyph-count " << glyphs.size() << ")" << std::endl;
+  metadata << "  (glyphs " << std::endl;
+
   Bitmap image_bitmap(image_width, 4096);
 
   int x_pos = 0;
@@ -60,17 +67,22 @@ void generate_image(std::vector<Glyph>& glyphs,
           image_bitmap.blit(*glyph.bitmap, x_pos+border, y_pos+border);
         }
 
-      std::cout << "(char "
-                << "(code " << glyph.charcode << ") "
-                << "(offset " << glyph.x_offset << " " << glyph.y_offset << ") "
-                << "(advance " << glyph.advance << ") "
-                << "(rect "
-                << x_pos << " " << y_pos << " " 
-                << x_pos+glyph.bitmap->get_width()+border*2 << " " << y_pos+glyph.bitmap->get_height()+border*2 << ")"
-                << ")" << std::endl;
+      metadata << "    (glyph "
+               << "(unicode " << glyph.charcode << ") "
+               << "(offset " << glyph.x_offset << " " << glyph.y_offset << ") "
+               << "(advance " << glyph.advance << ") "
+               << "(rect "
+               << x_pos << " " << y_pos << " " 
+               << x_pos+glyph.bitmap->get_width()+border*2 << " " << y_pos+glyph.bitmap->get_height()+border*2 << ")"
+               << ")" 
+               << " ;; " << (char)glyph.charcode
+               << std::endl;
 
       x_pos += glyph.bitmap->get_width() + 2*border;
     }
+
+  metadata << "  ))" << std::endl;
+  metadata << ";; EOF ;;" << std::endl;
 
   image_bitmap.truncate_height(y_pos + row_height + border);
   image_bitmap.write_pgm(pgm_filename);
@@ -92,7 +104,16 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
     }
       
   FT_Set_Pixel_Sizes(face, px_size, px_size);
-  FT_Select_Charmap(face,  FT_ENCODING_UNICODE);
+
+  {
+    FT_Error   error;
+    error = FT_Select_Charmap(face,  FT_ENCODING_UNICODE);
+    if (error)
+      {
+        std::cout << "Error: Couldn't set Unicode charmap" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+  }
 
   std::cout << "BBox: " << px_size << " "
             << px_size * face->bbox.xMin/face->units_per_EM << " " 
@@ -102,13 +123,11 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
             << face->units_per_EM
             << std::endl;
 
-  FT_ULong  charcode;                                              
-  FT_UInt   glyph_index;                                                
-  
-  charcode = FT_Get_First_Char( face, &glyph_index );
+  FT_UInt   glyph_index = 0;                                                
+  FT_ULong  charcode = FT_Get_First_Char( face, &glyph_index );
   while ( glyph_index != 0 )                                            
     {                                                                                                      
-      if (FT_Load_Char( face,  glyph_index, FT_LOAD_RENDER))//| FT_LOAD_FORCE_AUTOHINT))
+      if (FT_Load_Glyph( face,  glyph_index, FT_LOAD_RENDER))//| FT_LOAD_FORCE_AUTOHINT))
         {
           std::cerr << "couldn't load char: " << glyph_index << " '" << char(glyph_index) << "'" << std::endl;
           //impl->characters.push_back(0);
@@ -137,6 +156,9 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
         }
     }
 
+  std::cout << "Glyphs(intern):   " << face->num_glyphs << std::endl;
+  std::cout << "Glyphs(exported): " << glyphs.size() << std::endl;
+  
   FT_Done_Face(face);
 }
   
