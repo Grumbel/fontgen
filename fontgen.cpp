@@ -13,8 +13,70 @@
 
 FT_Library library;
 
-void generate_font(const std::string& filename, int px_size, int border, int img_width,
-                   std::ostream& metadata_stream)
+struct Glyph 
+{
+  Bitmap*  bitmap;
+  FT_ULong charcode;
+  int advance;
+  int x_offset;
+  int y_offset;
+};
+
+bool glyhp_height_sorter(const Glyph& lhs, const Glyph& rhs)
+{
+  return lhs.bitmap->get_height() > rhs.bitmap->get_height();
+}
+
+void generate_image(std::vector<Glyph>& glyphs, 
+                    int font_height, 
+                    int border, int image_width,
+                    const std::string& pgm_filename,
+                    const std::string& metadata_filename)
+{
+  Bitmap image_bitmap(image_width, 4096);
+
+  int x_pos = 0;
+  int y_pos = 0;
+  int row_height = 0;
+
+  std::sort(glyphs.begin(), glyphs.end(), glyhp_height_sorter);
+
+  for(std::vector<Glyph>::iterator i = glyphs.begin(); i != glyphs.end(); ++i)
+    {
+      Glyph& glyph = *i;
+
+      if (x_pos + glyph.bitmap->get_width() + 2*border > image_bitmap.get_width())
+        {
+          x_pos = border;
+          y_pos += row_height + 2*border;
+          row_height = glyph.bitmap->get_height();
+
+          image_bitmap.blit(*glyph.bitmap, x_pos+border, y_pos+border);
+        }
+      else
+        {
+          row_height = std::max(row_height, glyph.bitmap->get_height());
+          
+          image_bitmap.blit(*glyph.bitmap, x_pos+border, y_pos+border);
+        }
+
+      std::cout << "(char "
+                << "(code " << glyph.charcode << ") "
+                << "(offset " << glyph.x_offset << " " << glyph.y_offset << ") "
+                << "(advance " << glyph.advance << ") "
+                << "(rect "
+                << x_pos << " " << y_pos << " " 
+                << x_pos+glyph.bitmap->get_width()+border*2 << " " << y_pos+glyph.bitmap->get_height()+border*2 << ")"
+                << ")" << std::endl;
+
+      x_pos += glyph.bitmap->get_width() + 2*border;
+    }
+
+  image_bitmap.truncate_height(y_pos + row_height + border);
+  image_bitmap.write_pgm(pgm_filename);
+}
+
+void generate_font(const std::string& filename, int px_size, std::vector<Glyph>& glyphs)
 {
   // Read the TTF font file content into buffer
   std::ifstream fin(filename.c_str());
@@ -40,18 +102,9 @@ void generate_font(const std::string& filename, int px_size, int border, int img
             << face->units_per_EM
             << std::endl;
 
-  Bitmap image_bitmap(img_width, 4096);
-
-  // We limit ourself to 256 characters for the momemnt
-  int x_pos = 0;
-  int y_pos = 0;
-
-  //for(int glyph_index = 0; glyph_index < 256; glyph_index += 1)
-
   FT_ULong  charcode;                                              
   FT_UInt   glyph_index;                                                
-  int row_height = 0;
-
+  
   charcode = FT_Get_First_Char( face, &glyph_index );
   while ( glyph_index != 0 )                                            
     {                                                                                                      
@@ -62,52 +115,27 @@ void generate_font(const std::string& filename, int px_size, int border, int img
         }
       else
         {
-          FT_GlyphSlot glyph = face->glyph;;
+          Bitmap* glyph_bitmap = new Bitmap(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+          {
+            for(int y = 0; y < glyph_bitmap->get_height(); ++y)
+              for(int x = 0; x < glyph_bitmap->get_width(); ++x)
+                {
+                  glyph_bitmap->get_data()[y * glyph_bitmap->get_width() + x]
+                    = 255 - face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
+                }
+          }
 
-          int x_offset =  glyph->bitmap_left;
-          int y_offset = -glyph->bitmap_top;
-          int advance = (glyph->advance.x >> 6);
-          
-          Bitmap glyph_bitmap(glyph->bitmap.width, glyph->bitmap.rows);
+          Glyph glyph;
+          glyph.bitmap   = glyph_bitmap;
+          glyph.charcode = charcode;
+          glyph.advance  = (face->glyph->advance.x >> 6);
+          glyph.x_offset = face->glyph->bitmap_left;
+          glyph.y_offset = -face->glyph->bitmap_top;
+          glyphs.push_back(glyph);
 
-          for(int y = 0; y < glyph_bitmap.get_height(); ++y)
-            for(int x = 0; x < glyph_bitmap.get_width(); ++x)
-              {
-                glyph_bitmap.get_data()[y * glyph_bitmap.get_width() + x] = 255 - glyph->bitmap.buffer[y * glyph->bitmap.pitch + x];
-              }
-
-          if (x_pos + glyph_bitmap.get_width() + 2*border > image_bitmap.get_width())
-            {
-              x_pos = border;
-              y_pos += row_height + 2*border;
-              row_height = glyph_bitmap.get_height();
-
-              image_bitmap.blit(glyph_bitmap, x_pos+border, y_pos+border);
-            }
-          else
-            {
-              row_height = std::max(row_height, glyph_bitmap.get_height());
-          
-              image_bitmap.blit(glyph_bitmap, x_pos+border, y_pos+border);
-            }
-
-          std::cout << "(char "
-                    << "(code " << charcode << ") "
-                    << "(offset " << x_offset << " " << y_offset << ") "
-                    << "(advance " << advance << ") "
-                    << "(rect "
-                    << x_pos << " " << y_pos << " " 
-                    << x_pos+glyph_bitmap.get_width()+border*2 << " " << y_pos+glyph_bitmap.get_height()+border*2 << ")"
-                    << ")" << std::endl;
-
-          x_pos += glyph_bitmap.get_width() + 2*border;
+          charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
         }
-
-      charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
     }
-
-  image_bitmap.truncate_height(y_pos + row_height + border);
-  image_bitmap.write_pgm("/tmp/out.pgm");
 
   FT_Done_Face(face);
 }
@@ -125,8 +153,6 @@ int main(int argc, char** argv)
   int  border       = atoi(argv[3]);
   int  image_width  = atoi(argv[4]);
 
-  std::ofstream metadata_stream("/tmp/output.font");
-
   std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
 
   try 
@@ -136,10 +162,10 @@ int main(int argc, char** argv)
       error = FT_Init_FreeType(&library);
       if (error)
         throw std::runtime_error("could not initialize FreeType");   
-        
-      generate_font(ttf_filename, pixel_size, border, image_width, 
-                    std::cout);
-      //metadata_stream);
+
+      std::vector<Glyph> glyphs;
+      generate_font(ttf_filename, pixel_size, glyphs);
+      generate_image(glyphs, pixel_size, border, image_width, "/tmp/out.pgm", "/tmp/out.font");
         
       FT_Done_FreeType(library);
     } 
