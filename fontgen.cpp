@@ -86,6 +86,7 @@ void generate_image(std::vector<Glyph>& glyphs,
 
   image_bitmap.truncate_height(y_pos + row_height + border);
   image_bitmap.write_pgm(pgm_filename);
+  std::cout << "ImageSize: " << image_bitmap.get_width() << "x" << image_bitmap.get_height() << std::endl;
 }
 
 void generate_font(const std::string& filename, int px_size, std::vector<Glyph>& glyphs)
