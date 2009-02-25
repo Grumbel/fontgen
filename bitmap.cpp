@@ -23,6 +23,9 @@
 **  02111-1307, USA.
 */
 
+#include <stdexcept>
+#include <sstream>
+#include <assert.h>
 #include <stdio.h>
 #include <jpeglib.h>
 #include <iostream>
@@ -75,6 +78,7 @@ Bitmap::write_pgm(const std::string& filename)
   out << "# txt2png" << std::endl;
   out << get_width() << " " << get_height() << std::endl;
   out << "255" << std::endl;
+
   for(int y = 0; y < get_height(); ++y)
     for(int x = 0; x < get_width(); ++x)
       {
@@ -174,6 +178,13 @@ Bitmap::fill(int x1, int y1, int x2, int y2, unsigned char c)
 void
 Bitmap::truncate_height(int height_)
 {
+  if (height_ > height)
+    {
+      std::ostringstream str;
+      str << "image height to small, increase it to " << height_;
+      throw std::runtime_error(str.str());
+    }
+
   height = height_;
 }
 
