@@ -1,3 +1,4 @@
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include "utf8_iterator.hpp"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -134,7 +136,10 @@ void generate_image(std::vector<Glyph>& glyphs,
   std::cout << "ImageSize: " << image_bitmap.get_width() << "x" << image_bitmap.get_height() << std::endl;
 }
 
-void generate_font(const std::string& filename, int px_size, std::vector<Glyph>& glyphs)
+void generate_font(const std::string& filename, 
+                   int px_size, 
+                   const std::set<FT_ULong>& unicodes,
+                   std::vector<Glyph>& glyphs)
 {
   // Read the TTF font file content into buffer
   std::ifstream fin(filename.c_str());
@@ -172,34 +177,37 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
   FT_UInt   glyph_index = 0;                                                
   FT_ULong  charcode = FT_Get_First_Char( face, &glyph_index );
   while ( glyph_index != 0 )                                            
-    {                                                                                                      
-      if (FT_Load_Glyph( face,  glyph_index, FT_LOAD_RENDER))//| FT_LOAD_FORCE_AUTOHINT))
+    {                                                                                    
+      if (unicodes.empty() || unicodes.find(charcode) != unicodes.end())
         {
-          std::cerr << "couldn't load char: " << glyph_index << " '" << char(glyph_index) << "'" << std::endl;
-          //impl->characters.push_back(0);
-        }
-      else
-        {
-          Bitmap* glyph_bitmap = new Bitmap(face->glyph->bitmap.width, face->glyph->bitmap.rows);
-          {
-            for(int y = 0; y < glyph_bitmap->get_height(); ++y)
-              for(int x = 0; x < glyph_bitmap->get_width(); ++x)
-                {
-                  glyph_bitmap->get_data()[y * glyph_bitmap->get_width() + x]
-                    = 255 - face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
-                }
-          }
+          if (FT_Load_Glyph( face,  glyph_index, FT_LOAD_RENDER))//| FT_LOAD_FORCE_AUTOHINT))
+            {
+              std::cerr << "couldn't load char: " << glyph_index << " '" << char(glyph_index) << "'" << std::endl;
+              //impl->characters.push_back(0);
+            }
+          else
+            {
+              Bitmap* glyph_bitmap = new Bitmap(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+              {
+                for(int y = 0; y < glyph_bitmap->get_height(); ++y)
+                  for(int x = 0; x < glyph_bitmap->get_width(); ++x)
+                    {
+                      glyph_bitmap->get_data()[y * glyph_bitmap->get_width() + x]
+                        = 255 - face->glyph->bitmap.buffer[y * face->glyph->bitmap.pitch + x];
+                    }
+              }
 
-          Glyph glyph;
-          glyph.bitmap   = glyph_bitmap;
-          glyph.charcode = charcode;
-          glyph.advance  = (face->glyph->advance.x >> 6);
-          glyph.x_offset = face->glyph->bitmap_left;
-          glyph.y_offset = -face->glyph->bitmap_top;
-          glyphs.push_back(glyph);
-
-          charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
+              Glyph glyph;
+              glyph.bitmap   = glyph_bitmap;
+              glyph.charcode = charcode;
+              glyph.advance  = (face->glyph->advance.x >> 6);
+              glyph.x_offset = face->glyph->bitmap_left;
+              glyph.y_offset = -face->glyph->bitmap_top;
+              glyphs.push_back(glyph);
+            }
         }
+
+      charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
     }
 
   std::cout << "Glyphs(intern):   " << face->num_glyphs << std::endl;
@@ -210,9 +218,9 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
   
 int main(int argc, char** argv)
 {
-  if (argc != 6)
+  if (argc != 6 && argc != 7)
     {
-      std::cout << "Usage: " << argv[0] << " TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT" << std::endl;
+      std::cout << "Usage: " << argv[0] << " TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT [UNICODES]" << std::endl;
       return EXIT_FAILURE;
     }
 
@@ -221,6 +229,17 @@ int main(int argc, char** argv)
   int  border       = atoi(argv[3]);
   int  image_width  = atoi(argv[4]);
   int  image_height = atoi(argv[5]);
+
+  std::set<FT_ULong> unicodes;
+
+  if (argc == 7)
+    {
+      std::string codes = argv[6];
+      for(UTF8Iterator i(codes); !i.done(); ++i)
+        {
+          unicodes.insert(*i);
+        }
+    }
 
   std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
 
@@ -233,7 +252,8 @@ int main(int argc, char** argv)
         throw std::runtime_error("could not initialize FreeType");   
 
       std::vector<Glyph> glyphs;
-      generate_font(ttf_filename, pixel_size, glyphs);
+
+      generate_font(ttf_filename, pixel_size, unicodes, glyphs);
       generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
         
       FT_Done_FreeType(library);
