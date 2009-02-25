@@ -1,3 +1,6 @@
+#include <sstream>
+#include <stdexcept>
+#include <algorithm>
 #include <stdlib.h>
 #include <string>
 #include <stdexcept>
@@ -22,6 +25,46 @@ struct Glyph
   int y_offset;
 };
 
+std::string unicode_to_utf8(FT_ULong v)
+{
+  if (v < 0x7f)
+    {
+      std::string str(1, ' ');
+      str[0] = v;
+      return str;
+    }
+  else if (v < 0x7ff)
+    {
+      std::string str(2, ' ');
+      str[0] = 0xc0 | ((0x7c0 & v) >> 6);
+      str[1] = 0x80 | ((0x03f & v) >> 0);
+      return str;      
+    }
+  else if (v < 0xFFFF)
+    {
+      std::string str(3, ' ');
+      str[0] = 0xe0 | ((0xf000 & v) >> 12);
+      str[1] = 0x80 | ((0x0fc0 & v) >>  6);
+      str[2] = 0x80 | ((0x003f & v) >>  0);
+      return str;      
+    }
+  else if (v < 0x10FFFF)
+    {
+      std::string str(4, ' ');
+      str[0] = 0xf0 | ((0x1c0000 & v) >> 18);
+      str[1] = 0x80 | ((0x03f000 & v) >> 12);
+      str[2] = 0x80 | ((0x000fc0 & v) >>  6);
+      str[3] = 0x80 | ((0x00003f & v) >>  0);
+      return str;      
+    }
+  else
+    {
+      std::ostringstream str;
+      str << "unicode out of range: " << v;
+      throw std::runtime_error(str.str());
+    }
+}
+
 bool glyhp_height_sorter(const Glyph& lhs, const Glyph& rhs)
 {
   return lhs.bitmap->get_height() > rhs.bitmap->get_height();
@@ -29,7 +72,9 @@ bool glyhp_height_sorter(const Glyph& lhs, const Glyph& rhs)
 
 void generate_image(std::vector<Glyph>& glyphs, 
                     int font_height, 
-                    int border, int image_width,
+                    int border, 
+                    int image_width,
+                    int image_height,
                     const std::string& pgm_filename,
                     const std::string& metadata_filename)
 {
@@ -40,7 +85,7 @@ void generate_image(std::vector<Glyph>& glyphs,
   metadata << "  (glyph-count " << glyphs.size() << ")" << std::endl;
   metadata << "  (glyphs " << std::endl;
 
-  Bitmap image_bitmap(image_width, 4096);
+  Bitmap image_bitmap(image_width, image_height); // FIXME: hardcoded height is evil 
 
   int x_pos = 0;
   int y_pos = 0;
@@ -75,7 +120,7 @@ void generate_image(std::vector<Glyph>& glyphs,
                << x_pos << " " << y_pos << " " 
                << x_pos+glyph.bitmap->get_width()+border*2 << " " << y_pos+glyph.bitmap->get_height()+border*2 << ")"
                << ")" 
-               << " ;; " << (char)glyph.charcode
+               << " ;; " << unicode_to_utf8(glyph.charcode)
                << std::endl;
 
       x_pos += glyph.bitmap->get_width() + 2*border;
@@ -165,9 +210,9 @@ void generate_font(const std::string& filename, int px_size, std::vector<Glyph>&
   
 int main(int argc, char** argv)
 {
-  if (argc != 5)
+  if (argc != 6)
     {
-      std::cout << "Usage: " << argv[0] << " TTFFILE SIZE BORDER WIDTH" << std::endl;
+      std::cout << "Usage: " << argv[0] << " TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT" << std::endl;
       return EXIT_FAILURE;
     }
 
@@ -175,6 +220,7 @@ int main(int argc, char** argv)
   int  pixel_size   = atoi(argv[2]);
   int  border       = atoi(argv[3]);
   int  image_width  = atoi(argv[4]);
+  int  image_height = atoi(argv[5]);
 
   std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
 
@@ -188,7 +234,7 @@ int main(int argc, char** argv)
 
       std::vector<Glyph> glyphs;
       generate_font(ttf_filename, pixel_size, glyphs);
-      generate_image(glyphs, pixel_size, border, image_width, "/tmp/out.pgm", "/tmp/out.font");
+      generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
         
       FT_Done_FreeType(library);
     } 
