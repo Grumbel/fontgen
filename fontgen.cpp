@@ -8,7 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include "utf8_iterator.hpp"
+#include "utf8.hpp"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -216,51 +216,122 @@ void generate_font(const std::string& filename,
   FT_Done_Face(face);
 }
   
-int main(int argc, char** argv)
+void print_usage(const char* arg0)
 {
-  if (argc != 6 && argc != 7)
-    {
-      std::cout << "Usage: " << argv[0] << " TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT [UNICODES]" << std::endl;
-      return EXIT_FAILURE;
-    }
+  std::cout << "Usage: " << arg0 << " generate TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT [UNICODES]\n"
+            << "       " << arg0 << " listchars TTFFILE" << std::endl;
+  exit(EXIT_FAILURE);
+}
 
-  std::string ttf_filename = argv[1];
-  int  pixel_size   = atoi(argv[2]);
-  int  border       = atoi(argv[3]);
-  int  image_width  = atoi(argv[4]);
-  int  image_height = atoi(argv[5]);
-
-  std::set<FT_ULong> unicodes;
-
-  if (argc == 7)
-    {
-      std::string codes = argv[6];
-      for(UTF8Iterator i(codes); !i.done(); ++i)
-        {
-          unicodes.insert(*i);
-        }
-    }
-
-  std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
-
+void list_chars(const std::string& filename)
+{
   try 
     {
       FT_Error   error;
   
       error = FT_Init_FreeType(&library);
       if (error)
-        throw std::runtime_error("could not initialize FreeType");   
+        {
+          throw std::runtime_error("could not initialize FreeType");   
+        }
+      else
+        {
+          // Read the TTF font file content into buffer
+          std::ifstream fin(filename.c_str());
+          std::istreambuf_iterator<char> first(fin), last;
+          std::vector<char> buffer(first, last); 
 
-      std::vector<Glyph> glyphs;
+          FT_Face face;
+          if (FT_New_Memory_Face(library, 
+                                 reinterpret_cast<FT_Byte*>(&*buffer.begin()), buffer.size(), 
+                                 0, &face))
+            {
+              throw std::runtime_error("Couldn't load font: '" + filename + "'");
+            }
+      
+          FT_Set_Pixel_Sizes(face, 12, 12);
 
-      generate_font(ttf_filename, pixel_size, unicodes, glyphs);
-      generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
+          {
+            FT_Error   error;
+            error = FT_Select_Charmap(face,  FT_ENCODING_UNICODE);
+            if (error)
+              {
+                std::cout << "Error: Couldn't set Unicode charmap" << std::endl;
+                exit(EXIT_FAILURE);
+              }
+          }
+
+          FT_UInt   glyph_index = 0;                                                
+          FT_ULong  charcode = FT_Get_First_Char( face, &glyph_index );
+          while ( glyph_index != 0 )                                            
+            {
+              std::cout << unicode_to_utf8(charcode) << std::endl;
+              charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
+            }
+  
+          FT_Done_Face(face);
         
-      FT_Done_FreeType(library);
+          FT_Done_FreeType(library);
+        }
     } 
   catch(std::exception& err)
     {
       std::cout << "Error: " << err.what() << std::endl;
+    }      
+}
+
+int main(int argc, char** argv)
+{
+  if (argc == 3 && strcmp(argv[1], "listchars") == 0)
+    {
+      list_chars(argv[2]);
+    }
+  else if ((argc == 7 || argc == 8) &&
+           strcmp(argv[1], "generate") == 0)
+    {
+      std::string ttf_filename = argv[2];
+      int  pixel_size   = atoi(argv[3]);
+      int  border       = atoi(argv[4]);
+      int  image_width  = atoi(argv[5]);
+      int  image_height = atoi(argv[6]);
+
+      std::set<FT_ULong> unicodes;
+
+      if (argc == 8)
+        {
+          std::string codes = argv[7];
+          UTF8::iterator i(codes);
+          while(i.next())
+            {
+              unicodes.insert(*i);
+            }
+        }
+
+      std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
+
+      try 
+        {
+          FT_Error   error;
+  
+          error = FT_Init_FreeType(&library);
+          if (error)
+            throw std::runtime_error("could not initialize FreeType");   
+
+          std::vector<Glyph> glyphs;
+
+          generate_font(ttf_filename, pixel_size, unicodes, glyphs);
+          generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
+        
+          FT_Done_FreeType(library);
+        } 
+      catch(std::exception& err)
+        {
+          std::cout << "Error: " << err.what() << std::endl;
+        }    
+    }
+  else
+    {
+      print_usage(argv[0]);
     }
 
   return 0;
