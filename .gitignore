@@ -1,4 +1,3 @@
 *~
 *.o
-/.sconsign.dblite
-/fontgen
+/build*
