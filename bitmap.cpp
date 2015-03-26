@@ -16,7 +16,7 @@
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License for more details.
-** 
+**
 **  You should have received a copy of the GNU General Public License
 **  along with this program; if not, write to the Free Software
 **  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
@@ -58,10 +58,10 @@ Bitmap::blit(const Bitmap& source, int x_pos, int y_pos)
 {
   int start_x = std::max(0, -x_pos);
   int start_y = std::max(0, -y_pos);
-  
+
   int end_x = std::min(source.width,  width  - x_pos);
   int end_y = std::min(source.height, height - y_pos);
- 
+
   for(int y = start_y; y < end_y; ++y)
     for(int x = start_x; x < end_x; ++x)
       { // opaque blit, could use alpha/add blit instead
@@ -69,11 +69,11 @@ Bitmap::blit(const Bitmap& source, int x_pos, int y_pos)
       }
 }
 
-void 
+void
 Bitmap::write_pgm(const std::string& filename)
 {
   std::ofstream out(filename.c_str());
-  
+
   out << "P2" << std::endl;
   out << "# txt2png" << std::endl;
   out << get_width() << " " << get_height() << std::endl;
@@ -92,7 +92,7 @@ Bitmap::write_jpg(const std::string& filename)
 {
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
-  
+
   /* More stuff */
   FILE * outfile;		/* target file */
 
@@ -125,7 +125,7 @@ Bitmap::write_jpg(const std::string& filename)
   for(int y = 0; y < get_height(); ++y)
     row_pointer[y] = &buffer[y * get_width()];
 
-  while (cinfo.next_scanline < cinfo.image_height) 
+  while (cinfo.next_scanline < cinfo.image_height)
     {
       jpeg_write_scanlines(&cinfo, row_pointer, get_height());
     }
@@ -161,7 +161,7 @@ Bitmap::invert(int x1, int y1, int x2, int y2)
 
 void
 Bitmap::fill(int x1, int y1, int x2, int y2, unsigned char c)
-{  
+{
   x1 = std::max(0, x1);
   y1 = std::max(0, y1);
 

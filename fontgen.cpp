@@ -18,7 +18,7 @@
 
 FT_Library library;
 
-struct Glyph 
+struct Glyph
 {
   Bitmap*  bitmap;
   FT_ULong charcode;
@@ -40,7 +40,7 @@ std::string unicode_to_utf8(FT_ULong v)
       std::string str(2, ' ');
       str[0] = 0xc0 | ((0x7c0 & v) >> 6);
       str[1] = 0x80 | ((0x03f & v) >> 0);
-      return str;      
+      return str;
     }
   else if (v < 0xFFFF)
     {
@@ -48,7 +48,7 @@ std::string unicode_to_utf8(FT_ULong v)
       str[0] = 0xe0 | ((0xf000 & v) >> 12);
       str[1] = 0x80 | ((0x0fc0 & v) >>  6);
       str[2] = 0x80 | ((0x003f & v) >>  0);
-      return str;      
+      return str;
     }
   else if (v < 0x10FFFF)
     {
@@ -57,7 +57,7 @@ std::string unicode_to_utf8(FT_ULong v)
       str[1] = 0x80 | ((0x03f000 & v) >> 12);
       str[2] = 0x80 | ((0x000fc0 & v) >>  6);
       str[3] = 0x80 | ((0x00003f & v) >>  0);
-      return str;      
+      return str;
     }
   else
     {
@@ -72,9 +72,9 @@ bool glyhp_height_sorter(const Glyph& lhs, const Glyph& rhs)
   return lhs.bitmap->get_height() > rhs.bitmap->get_height();
 }
 
-void generate_image(std::vector<Glyph>& glyphs, 
-                    int font_height, 
-                    int border, 
+void generate_image(std::vector<Glyph>& glyphs,
+                    int font_height,
+                    int border,
                     int image_width,
                     int image_height,
                     const std::string& pgm_filename,
@@ -87,7 +87,7 @@ void generate_image(std::vector<Glyph>& glyphs,
   metadata << "  (glyph-count " << glyphs.size() << ")" << std::endl;
   metadata << "  (glyphs " << std::endl;
 
-  Bitmap image_bitmap(image_width, image_height); // FIXME: hardcoded height is evil 
+  Bitmap image_bitmap(image_width, image_height); // FIXME: hardcoded height is evil
 
   int x_pos = 0;
   int y_pos = 0;
@@ -110,7 +110,7 @@ void generate_image(std::vector<Glyph>& glyphs,
       else
         {
           row_height = std::max(row_height, glyph.bitmap->get_height());
-          
+
           image_bitmap.blit(*glyph.bitmap, x_pos+border, y_pos+border);
         }
 
@@ -119,9 +119,9 @@ void generate_image(std::vector<Glyph>& glyphs,
                << "(offset " << glyph.x_offset << " " << glyph.y_offset << ") "
                << "(advance " << glyph.advance << ") "
                << "(rect "
-               << x_pos << " " << y_pos << " " 
+               << x_pos << " " << y_pos << " "
                << x_pos+glyph.bitmap->get_width()+border*2 << " " << y_pos+glyph.bitmap->get_height()+border*2 << ")"
-               << ")" 
+               << ")"
                << " ;; " << unicode_to_utf8(glyph.charcode)
                << std::endl;
 
@@ -136,24 +136,24 @@ void generate_image(std::vector<Glyph>& glyphs,
   std::cout << "ImageSize: " << image_bitmap.get_width() << "x" << image_bitmap.get_height() << std::endl;
 }
 
-void generate_font(const std::string& filename, 
-                   int px_size, 
+void generate_font(const std::string& filename,
+                   int px_size,
                    const std::set<FT_ULong>& unicodes,
                    std::vector<Glyph>& glyphs)
 {
   // Read the TTF font file content into buffer
   std::ifstream fin(filename.c_str());
   std::istreambuf_iterator<char> first(fin), last;
-  std::vector<char> buffer(first, last); 
+  std::vector<char> buffer(first, last);
 
   FT_Face face;
-  if (FT_New_Memory_Face(library, 
-                         reinterpret_cast<FT_Byte*>(&*buffer.begin()), buffer.size(), 
+  if (FT_New_Memory_Face(library,
+                         reinterpret_cast<FT_Byte*>(&*buffer.begin()), buffer.size(),
                          0, &face))
     {
       throw std::runtime_error("Couldn't load font: '" + filename + "'");
     }
-      
+
   FT_Set_Pixel_Sizes(face, px_size, px_size);
 
   {
@@ -167,17 +167,17 @@ void generate_font(const std::string& filename,
   }
 
   std::cout << "BBox: " << px_size << " "
-            << px_size * face->bbox.xMin/face->units_per_EM << " " 
-            << px_size * face->bbox.yMin/face->units_per_EM << " " 
-            << px_size * face->bbox.xMax/face->units_per_EM << " " 
-            << px_size * face->bbox.yMax/face->units_per_EM << " " 
+            << px_size * face->bbox.xMin/face->units_per_EM << " "
+            << px_size * face->bbox.yMin/face->units_per_EM << " "
+            << px_size * face->bbox.xMax/face->units_per_EM << " "
+            << px_size * face->bbox.yMax/face->units_per_EM << " "
             << face->units_per_EM
             << std::endl;
 
-  FT_UInt   glyph_index = 0;                                                
+  FT_UInt   glyph_index = 0;
   FT_ULong  charcode = FT_Get_First_Char( face, &glyph_index );
-  while ( glyph_index != 0 )                                            
-    {                                                                                    
+  while ( glyph_index != 0 )
+    {
       if (unicodes.empty() || unicodes.find(charcode) != unicodes.end())
         {
           if (FT_Load_Glyph( face,  glyph_index, FT_LOAD_RENDER))//| FT_LOAD_FORCE_AUTOHINT))
@@ -212,10 +212,10 @@ void generate_font(const std::string& filename,
 
   std::cout << "Glyphs(intern):   " << face->num_glyphs << std::endl;
   std::cout << "Glyphs(exported): " << glyphs.size() << std::endl;
-  
+
   FT_Done_Face(face);
 }
-  
+
 void print_usage(const char* arg0)
 {
   std::cout << "Usage: " << arg0 << " generate TTFFILE SIZE BORDER IMAGEWIDTH IMAGEHEIGHT [UNICODES]\n"
@@ -225,30 +225,30 @@ void print_usage(const char* arg0)
 
 void list_chars(const std::string& filename)
 {
-  try 
+  try
     {
       FT_Error   error;
-  
+
       error = FT_Init_FreeType(&library);
       if (error)
         {
-          throw std::runtime_error("could not initialize FreeType");   
+          throw std::runtime_error("could not initialize FreeType");
         }
       else
         {
           // Read the TTF font file content into buffer
           std::ifstream fin(filename.c_str());
           std::istreambuf_iterator<char> first(fin), last;
-          std::vector<char> buffer(first, last); 
+          std::vector<char> buffer(first, last);
 
           FT_Face face;
-          if (FT_New_Memory_Face(library, 
-                                 reinterpret_cast<FT_Byte*>(&*buffer.begin()), buffer.size(), 
+          if (FT_New_Memory_Face(library,
+                                 reinterpret_cast<FT_Byte*>(&*buffer.begin()), buffer.size(),
                                  0, &face))
             {
               throw std::runtime_error("Couldn't load font: '" + filename + "'");
             }
-      
+
           FT_Set_Pixel_Sizes(face, 12, 12);
 
           {
@@ -261,23 +261,23 @@ void list_chars(const std::string& filename)
               }
           }
 
-          FT_UInt   glyph_index = 0;                                                
+          FT_UInt   glyph_index = 0;
           FT_ULong  charcode = FT_Get_First_Char( face, &glyph_index );
-          while ( glyph_index != 0 )                                            
+          while ( glyph_index != 0 )
             {
               std::cout << unicode_to_utf8(charcode) << std::endl;
               charcode = FT_Get_Next_Char( face, charcode, &glyph_index );
             }
-  
+
           FT_Done_Face(face);
-        
+
           FT_Done_FreeType(library);
         }
-    } 
+    }
   catch(std::exception& err)
     {
       std::cout << "Error: " << err.what() << std::endl;
-    }      
+    }
 }
 
 int main(int argc, char** argv)
@@ -309,25 +309,25 @@ int main(int argc, char** argv)
 
       std::cout << "Generating image from " << ttf_filename << " with size " << pixel_size << " and width " << image_width << std::endl;
 
-      try 
+      try
         {
           FT_Error   error;
-  
+
           error = FT_Init_FreeType(&library);
           if (error)
-            throw std::runtime_error("could not initialize FreeType");   
+            throw std::runtime_error("could not initialize FreeType");
 
           std::vector<Glyph> glyphs;
 
           generate_font(ttf_filename, pixel_size, unicodes, glyphs);
           generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
-        
+
           FT_Done_FreeType(library);
-        } 
+        }
       catch(std::exception& err)
         {
           std::cout << "Error: " << err.what() << std::endl;
-        }    
+        }
     }
   else
     {
@@ -336,5 +336,5 @@ int main(int argc, char** argv)
 
   return 0;
 }
-  
+
 /* EOF */
