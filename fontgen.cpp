@@ -322,6 +322,9 @@ int main(int argc, char** argv)
           generate_font(ttf_filename, pixel_size, unicodes, glyphs);
           generate_image(glyphs, pixel_size, border, image_width, image_height, "/tmp/out.pgm", "/tmp/out.font");
 
+          std::cout << "Wrote /tmp/out.pgm\n"
+                    << "Wrote /tmp/out.font\n";
+
           FT_Done_FreeType(library);
         }
       catch(std::exception& err)
