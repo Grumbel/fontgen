@@ -41,6 +41,9 @@ addons:
     - llvm-toolchain-precise
     packages:
     - build-essential
+    - cmake
+    - clang-4.0
+    - g++-4.9
     - libfreetype6-dev
     - libjpeg-dev
     - libboost-all-dev
