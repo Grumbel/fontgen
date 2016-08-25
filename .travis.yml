@@ -11,32 +11,19 @@
 #
 
 language: cpp
+dist: trusty
+sudo: required
 
 compiler:
   - gcc
-#  - clang
+  - clang
 
-env:
-  global:
-    - CMAKE_VERSION=3.2.1
+os:
+  - linux
 
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq build-essential libfreetype6-dev libjpeg-dev
-
-  # Current gcc that supports C++ 11 features
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update -qq
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.9; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
-
-  # CMake
-  - wget http://www.cmake.org/files/v3.2/cmake-$CMAKE_VERSION.tar.gz -O - | tar xz
-  - (cd cmake-$CMAKE_VERSION && cmake . && make -j3 && sudo make install)
-
-  # Boost
-  # - wget http://netcologne.dl.sourceforge.net/project/boost/boost/1.57.0/boost_1_57_0.tar.gz -O - | tar xz
-  # - (cd boost_1_57_0 && ./bootstrap.sh --prefix=/usr && ./b2 stage threading=multi link=shared && sudo ./b2 install threading=multi link=shared)
+  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-4.0" CC="clang-4.0"; fi
 
 script:
   # Clean from previous Travis build
@@ -46,5 +33,16 @@ script:
   - cd "build"
   - cmake ..
   - make VERBOSE=1 -j3
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - llvm-toolchain-precise
+    packages:
+    - build-essential
+    - libfreetype6-dev
+    - libjpeg-dev
+    - libboost-all-dev
 
 # EOF #
