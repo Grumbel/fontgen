@@ -28,7 +28,6 @@
 #include <sstream>
 #include <assert.h>
 #include <stdio.h>
-#include <jpeglib.h>
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -86,56 +85,6 @@ Bitmap::write_pgm(const std::string& filename)
         out << int(at(x, y)) << " ";
       }
   out << std::endl;
-}
-
-void
-Bitmap::write_jpg(const std::string& filename)
-{
-  struct jpeg_compress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-
-  /* More stuff */
-  FILE * outfile;		/* target file */
-
-  cinfo.err = jpeg_std_error(&jerr);
-  /* Now we can initialize the JPEG compression object. */
-  jpeg_create_compress(&cinfo);
-
-  if ((outfile = fopen(filename.c_str(), "wb")) == NULL)
-    {
-      std::cerr << "can't open "  << filename << std::endl;
-      return;
-    }
-  jpeg_stdio_dest(&cinfo, outfile);
-
-  cinfo.image_width  = get_width();
-  cinfo.image_height = get_height();
-  cinfo.input_components = 1;	//3	/* # of color components per pixel */
-  cinfo.in_color_space = JCS_GRAYSCALE; /* colorspace of input image */
-
-  jpeg_set_defaults(&cinfo);
-
-  jpeg_set_quality(&cinfo, 85, TRUE /* limit to baseline-JPEG values */);
-
-  /* TRUE ensures that we will write a complete interchange-JPEG file.
-   * Pass TRUE unless you are very sure of what you're doing. */
-  jpeg_start_compress(&cinfo, TRUE);
-
-  std::vector<JSAMPROW> row_pointer(get_height());	/* pointer to JSAMPLE row[s] */
-
-  for(int y = 0; y < get_height(); ++y)
-    row_pointer[y] = &buffer[y * get_width()];
-
-  while (cinfo.next_scanline < cinfo.image_height)
-    {
-      jpeg_write_scanlines(&cinfo, row_pointer.data(), get_height());
-    }
-
-  jpeg_finish_compress(&cinfo);
-
-  fclose(outfile);
-
-  jpeg_destroy_compress(&cinfo);
 }
 
 unsigned char

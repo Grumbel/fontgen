@@ -47,7 +47,6 @@ public:
   unsigned char* get_data() { return buffer; }
   void clear();
   void write_pgm(const std::string& filename);
-  void write_jpg(const std::string& filename);
 
   void truncate_height(int height);
 
