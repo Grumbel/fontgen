@@ -25,17 +25,20 @@ if(WARNINGS)
     -Wconversion -Werror -Wshadow -Wcast-qual -Winit-self -Wno-unused-parameter)
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 find_package(Threads REQUIRED)
-find_package(JPEG REQUIRED)
 find_package(Freetype REQUIRED)
 
 add_executable(fontgen fontgen.cpp bitmap.cpp utf8.cpp)
-target_compile_options(fontgen PRIVATE -std=c++11 ${WARNINGS_CXX_FLAGS})
-target_include_directories(fontgen PRIVATE ${FREETYPE_INCLUDE_DIRS})
+target_compile_options(fontgen PRIVATE ${WARNINGS_CXX_FLAGS})
 target_link_libraries(fontgen
-  ${FREETYPE_LIBRARIES}
-  ${JPEG_LIBRARIES}
-  ${CMAKE_THREAD_LIBS_INIT})
+  Freetype::Freetype
+  Threads::Threads)
+
+install(TARGETS fontgen)
 
 # EOF #
 
