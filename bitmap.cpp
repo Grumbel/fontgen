@@ -23,6 +23,7 @@
 **  02111-1307, USA.
 */
 
+#include <vector>
 #include <stdexcept>
 #include <sstream>
 #include <assert.h>
@@ -120,14 +121,14 @@ Bitmap::write_jpg(const std::string& filename)
    * Pass TRUE unless you are very sure of what you're doing. */
   jpeg_start_compress(&cinfo, TRUE);
 
-  JSAMPROW row_pointer[get_height()];	/* pointer to JSAMPLE row[s] */
+  std::vector<JSAMPROW> row_pointer(get_height());	/* pointer to JSAMPLE row[s] */
 
   for(int y = 0; y < get_height(); ++y)
     row_pointer[y] = &buffer[y * get_width()];
 
   while (cinfo.next_scanline < cinfo.image_height)
     {
-      jpeg_write_scanlines(&cinfo, row_pointer, get_height());
+      jpeg_write_scanlines(&cinfo, row_pointer.data(), get_height());
     }
 
   jpeg_finish_compress(&cinfo);

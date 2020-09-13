@@ -32,31 +32,31 @@ std::string unicode_to_utf8(FT_ULong v)
   if (v < 0x7f)
     {
       std::string str(1, ' ');
-      str[0] = v;
+      str[0] = static_cast<char>(v);
       return str;
     }
   else if (v < 0x7ff)
     {
       std::string str(2, ' ');
-      str[0] = 0xc0 | ((0x7c0 & v) >> 6);
-      str[1] = 0x80 | ((0x03f & v) >> 0);
+      str[0] = static_cast<char>(0xc0 | ((0x7c0 & v) >> 6));
+      str[1] = static_cast<char>(0x80 | ((0x03f & v) >> 0));
       return str;
     }
   else if (v < 0xFFFF)
     {
       std::string str(3, ' ');
-      str[0] = 0xe0 | ((0xf000 & v) >> 12);
-      str[1] = 0x80 | ((0x0fc0 & v) >>  6);
-      str[2] = 0x80 | ((0x003f & v) >>  0);
+      str[0] = static_cast<char>(0xe0 | ((0xf000 & v) >> 12));
+      str[1] = static_cast<char>(0x80 | ((0x0fc0 & v) >>  6));
+      str[2] = static_cast<char>(0x80 | ((0x003f & v) >>  0));
       return str;
     }
   else if (v < 0x10FFFF)
     {
       std::string str(4, ' ');
-      str[0] = 0xf0 | ((0x1c0000 & v) >> 18);
-      str[1] = 0x80 | ((0x03f000 & v) >> 12);
-      str[2] = 0x80 | ((0x000fc0 & v) >>  6);
-      str[3] = 0x80 | ((0x00003f & v) >>  0);
+      str[0] = static_cast<char>(0xf0 | ((0x1c0000 & v) >> 18));
+      str[1] = static_cast<char>(0x80 | ((0x03f000 & v) >> 12));
+      str[2] = static_cast<char>(0x80 | ((0x000fc0 & v) >>  6));
+      str[3] = static_cast<char>(0x80 | ((0x00003f & v) >>  0));
       return str;
     }
   else
@@ -200,7 +200,7 @@ void generate_font(const std::string& filename,
               Glyph glyph;
               glyph.bitmap   = glyph_bitmap;
               glyph.charcode = charcode;
-              glyph.advance  = (face->glyph->advance.x >> 6);
+              glyph.advance  = static_cast<int>(face->glyph->advance.x) >> 6;
               glyph.x_offset = face->glyph->bitmap_left;
               glyph.y_offset = -face->glyph->bitmap_top;
               glyphs.push_back(glyph);
@@ -252,9 +252,9 @@ void list_chars(const std::string& filename)
           FT_Set_Pixel_Sizes(face, 12, 12);
 
           {
-            FT_Error   error;
-            error = FT_Select_Charmap(face,  FT_ENCODING_UNICODE);
-            if (error)
+            FT_Error err;
+            err = FT_Select_Charmap(face,  FT_ENCODING_UNICODE);
+            if (err)
               {
                 std::cout << "Error: Couldn't set Unicode charmap" << std::endl;
                 exit(EXIT_FAILURE);

@@ -246,7 +246,7 @@ UTF8::iterator::next()
     idx = pos;
     chr = decode_utf8(*text, pos);
   }
-  catch (std::exception)
+  catch (std::exception const&)
   {
     std::cerr << "Malformed utf-8 sequence beginning with " << *(reinterpret_cast<const uint32_t*>(text->c_str() + pos)) << " found " << std::endl;
     chr = INVALID_UTF8_SEQUENCE;
