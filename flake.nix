@@ -1,8 +1,8 @@
 rec {
-  description = "Windstille GUI Engine";
+  description = "TTF to PNG Font Generator";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -11,19 +11,24 @@ rec {
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in rec {
-        packages = flake-utils.lib.flattenTree {
+        packages = rec {
+          default = fontgen;
+
           fontgen = pkgs.stdenv.mkDerivation {
             pname = "fontgen";
             version = "0.0.0";
-            src = nixpkgs.lib.cleanSource ./.;
-            nativeBuildInputs = [
-              pkgs.cmake
+
+            src = ./.;
+
+            nativeBuildInputs = with pkgs; [
+              cmake
             ];
-            buildInputs = [
-              pkgs.freetype
+
+            buildInputs = with pkgs; [
+              freetype
             ];
            };
         };
-        defaultPackage = packages.fontgen;
-      });
+      }
+    );
 }
