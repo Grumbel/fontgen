@@ -32,7 +32,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Threads REQUIRED)
 find_package(Freetype REQUIRED)
 
-add_executable(fontgen fontgen.cpp bitmap.cpp utf8.cpp)
+add_executable(fontgen src/fontgen.cpp src/bitmap.cpp src/utf8.cpp)
 target_compile_options(fontgen PRIVATE ${WARNINGS_CXX_FLAGS})
 target_link_libraries(fontgen
   Freetype::Freetype
