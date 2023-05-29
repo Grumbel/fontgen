@@ -64,9 +64,9 @@ Bitmap::blit(const Bitmap& source, int x_pos, int y_pos)
 
   for(int y = start_y; y < end_y; ++y)
     for(int x = start_x; x < end_x; ++x)
-      { // opaque blit, could use alpha/add blit instead
-        buffer[(y + y_pos) * width + (x + x_pos)] = source.buffer[y * source.width + x];
-      }
+    { // opaque blit, could use alpha/add blit instead
+      buffer[(y + y_pos) * width + (x + x_pos)] = source.buffer[y * source.width + x];
+    }
 }
 
 void
@@ -81,9 +81,9 @@ Bitmap::write_pgm(const std::string& filename)
 
   for(int y = 0; y < get_height(); ++y)
     for(int x = 0; x < get_width(); ++x)
-      {
-        out << int(at(x, y)) << " ";
-      }
+    {
+      out << int(at(x, y)) << " ";
+    }
   out << std::endl;
 }
 
@@ -104,9 +104,9 @@ Bitmap::invert(int x1, int y1, int x2, int y2)
 
   for(int y = y1; y < y2; ++y)
     for(int x = x1; x < x2; ++x)
-      {
-        buffer[y * width + x] = 255 - buffer[y * width + x];
-      }
+    {
+      buffer[y * width + x] = 255 - buffer[y * width + x];
+    }
 }
 
 void
@@ -120,20 +120,20 @@ Bitmap::fill(int x1, int y1, int x2, int y2, unsigned char c)
 
   for(int y = y1; y < y2; ++y)
     for(int x = x1; x < x2; ++x)
-      {
-        buffer[y * width + x] = c;
-      }
+    {
+      buffer[y * width + x] = c;
+    }
 }
 
 void
 Bitmap::truncate_height(int height_)
 {
   if (height_ > height)
-    {
-      std::ostringstream str;
-      str << "image height to small, increase it to " << height_;
-      throw std::runtime_error(str.str());
-    }
+  {
+    std::ostringstream str;
+    str << "image height to small, increase it to " << height_;
+    throw std::runtime_error(str.str());
+  }
 
   height = height_;
 }
